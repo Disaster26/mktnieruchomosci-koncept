@@ -14,14 +14,7 @@
     document.addEventListener('keydown',function(e){if(e.key==='Escape')zamknij();});
   }
 
-  /* aktywna pozycja menu na liście ofert */
   var qs=new URLSearchParams(location.search);
-  if(document.body.classList.contains('str-oferty')){
-    var t=qs.get('t');
-    [].forEach.call(nav.querySelectorAll('a[data-k]'),function(a){
-      if((t==='sprzedaz'&&a.dataset.k==='sprzedaz')||(t==='wynajem'&&a.dataset.k==='wynajem')) a.setAttribute('aria-current','page');
-    });
-  }
 
   /* przeciąganie myszą dla przewijanych pasów */
   function drag(el){
@@ -50,6 +43,14 @@
     el.addEventListener('click',function(e){if(moved){e.preventDefault();e.stopPropagation();}},true);
     el.addEventListener('dragstart',function(e){e.preventDefault();});
   }
+
+  /* zdjęcia mniejsze niż miejsce w galerii nie są rozciągane */
+  function male(){[].forEach.call(document.querySelectorAll('.car-sl img[data-nw]'),function(im){
+    var s=im.parentElement; s.classList.remove('mala');
+    var r=s.getBoundingClientRect(), nw=+im.dataset.nw, nh=nw*(+im.getAttribute('height'))/(+im.getAttribute('width'));
+    if(r.width&&Math.max(r.width/nw,r.height/nh)>1.1) s.classList.add('mala');
+  });}
+  male(); window.addEventListener('resize',function(){window.requestAnimationFrame(male);});
 
   /* karuzele zdjęć w kartach i w galerii oferty */
   [].forEach.call(document.querySelectorAll('.car'),function(c){
@@ -107,28 +108,67 @@
     if(stopka) new IntersectionObserver(function(e){przy=e[0].isIntersecting;pokaz();}).observe(stopka);
   }
 
-  /* filtry listy ofert */
+  /* wyszukiwarka ofert */
+  var szw=document.getElementById('szukW');
+  if(szw){var mq=window.matchMedia('(min-width:700px)');function szo(){if(mq.matches)szw.open=true;}szo();if(mq.addEventListener)mq.addEventListener('change',szo);
+    var q0=new URLSearchParams(location.search);if(['m','c1','c2','a1','a2'].some(function(x){return q0.get(x);}))szw.open=true;}
   var siatka=document.getElementById('siatka');
   if(siatka){
-    var st={t:qs.get('t')||'',k:qs.get('k')||'',m:qs.get('m')||''};
+    var pola={m:document.getElementById('fM'),c1:document.getElementById('fC1'),c2:document.getElementById('fC2'),a1:document.getElementById('fA1'),a2:document.getElementById('fA2')};
+    var st={k:qs.get('k')||''};
+    Object.keys(pola).forEach(function(x){st[x]=qs.get(x)||'';if(pola[x])pola[x].value=st[x];});
+    if(pola.m&&st.m&&pola.m.value!==st.m){var op=document.createElement('option');op.textContent=st.m;pola.m.appendChild(op);pola.m.value=st.m;}
     var karty=[].slice.call(siatka.querySelectorAll('.karta'));
-    var N=document.getElementById('listaN'), H=document.getElementById('listaH'), pusto=document.getElementById('pusto');
-    var fm=document.getElementById('filtrM');
-    var nazwyT={'':'Oferty nieruchomości',sprzedaz:'Oferty sprzedaży',wynajem:'Oferty wynajmu'};
+    var N=document.getElementById('listaN'), pusto=document.getElementById('pusto'), X=document.getElementById('fX');
     function odm(n){if(n===1)return'oferta';var d=n%10,s=n%100;return(d>=2&&d<=4&&(s<10||s>=20))?'oferty':'ofert';}
+    function liczba(v){v=String(v||'').replace(/\s/g,'').replace(',','.');var n=parseFloat(v);return isNaN(n)?null:n;}
     function apply(push){
-      var c=0;
-      karty.forEach(function(k){var ok=(!st.t||k.dataset.t===st.t)&&(!st.k||k.dataset.k===st.k)&&(!st.m||k.dataset.m===st.m);k.hidden=!ok;if(ok)c++;});
-      N.textContent=c+' '+odm(c); H.textContent=nazwyT[st.t]||nazwyT[''];
-      pusto.hidden=c>0;
-      [].forEach.call(document.querySelectorAll('.filtry .chip'),function(ch){ch.setAttribute('aria-pressed',st[ch.dataset.f]===ch.dataset.v?'true':'false');});
-      fm.hidden=!st.m; if(st.m) fm.querySelector('b').textContent=st.m;
-      [].forEach.call(nav.querySelectorAll('a[data-k]'),function(a){if(a.dataset.k==='sprzedaz'||a.dataset.k==='wynajem'){if(a.dataset.k===st.t)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}});
-      if(push){var u=new URLSearchParams();['t','k','m'].forEach(function(x){if(st[x])u.set(x,st[x]);});history.replaceState(null,'',location.pathname+(u.toString()?'?'+u:''));}
+      var c=0,c1=liczba(st.c1),c2=liczba(st.c2),a1=liczba(st.a1),a2=liczba(st.a2);
+      karty.forEach(function(k){
+        var cena=+k.dataset.c, pow=+k.dataset.a;
+        var ok=(!st.k||k.dataset.k===st.k)&&(!st.m||k.dataset.m===st.m)&&(c1===null||cena>=c1)&&(c2===null||cena<=c2)&&(a1===null||pow>=a1)&&(a2===null||pow<=a2);
+        k.hidden=!ok;if(ok)c++;
+      });
+      N.textContent=c+' '+odm(c); pusto.hidden=c>0;
+      [].forEach.call(document.querySelectorAll('.filtry button.chip'),function(ch){ch.setAttribute('aria-pressed',st[ch.dataset.f]===ch.dataset.v?'true':'false');});
+      var akt=['k','m','c1','c2','a1','a2'].some(function(x){return st[x];}); if(X)X.hidden=!akt;
+      if(push){var u=new URLSearchParams();['k','m','c1','c2','a1','a2'].forEach(function(x){if(st[x])u.set(x,st[x]);});history.replaceState(null,'',location.pathname+(u.toString()?'?'+u:''));}
     }
-    [].forEach.call(document.querySelectorAll('.filtry .chip'),function(ch){ch.addEventListener('click',function(){st[ch.dataset.f]=ch.dataset.v;apply(true);});});
-    document.getElementById('filtrMx').addEventListener('click',function(){st.m='';apply(true);});
+    [].forEach.call(document.querySelectorAll('.filtry button.chip'),function(ch){ch.addEventListener('click',function(){st[ch.dataset.f]=ch.dataset.v;apply(true);});});
+    Object.keys(pola).forEach(function(x){if(!pola[x])return;pola[x].addEventListener(x==='m'?'change':'input',function(){st[x]=pola[x].value.trim();apply(true);});});
+    if(X)X.addEventListener('click',function(){Object.keys(st).forEach(function(x){st[x]='';if(pola[x])pola[x].value='';});apply(true);});
     apply(false);
+  }
+
+  /* powiększanie zdjęć oferty */
+  var duza=document.querySelector('.car-duza');
+  if(duza){
+    var imgs=[].slice.call(duza.querySelectorAll('.car-sl img')), lb=null, ltr, lcnt;
+    function zbuduj(){
+      lb=document.createElement('div');lb.className='lb';lb.hidden=true;lb.setAttribute('role','dialog');lb.setAttribute('aria-modal','true');lb.setAttribute('aria-label','Zdjęcia oferty');
+      lb.innerHTML='<div class="lb-pas"><span class="lb-c"></span><div class="lb-nav"><button type="button" class="lb-p" aria-label="Poprzednie zdjęcie"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button><button type="button" class="lb-n" aria-label="Następne zdjęcie"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button><button type="button" class="lb-x" aria-label="Zamknij"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button></div></div><div class="lb-tr"></div>';
+      ltr=lb.querySelector('.lb-tr'); lcnt=lb.querySelector('.lb-c');
+      imgs.forEach(function(im){var s=document.createElement('div');s.className='lb-sl';var i=document.createElement('img');i.alt=im.alt;i.dataset.src=im.dataset.l||im.currentSrc||im.src;s.appendChild(i);ltr.appendChild(s);
+        i.addEventListener('click',function(e){var z=!s.classList.contains('zoom');s.classList.toggle('zoom',z);if(z){var r=i.getBoundingClientRect();s.scrollLeft=(e.clientX-r.left)*(i.naturalWidth/r.width)-s.clientWidth/2;s.scrollTop=(e.clientY-r.top)*(i.naturalHeight/r.height)-s.clientHeight/2;}});});
+      document.body.appendChild(lb);
+      function li(){return Math.round(ltr.scrollLeft/Math.max(1,ltr.clientWidth));}
+      function laduj(i){[i-1,i,i+1].forEach(function(k){var e=ltr.children[k];if(e){var im=e.firstChild;if(!im.src)im.src=im.dataset.src;}});}
+      function lgo(i){i=Math.max(0,Math.min(imgs.length-1,i));laduj(i);ltr.scrollTo({left:i*ltr.clientWidth});}
+      ltr.addEventListener('scroll',function(){var i=li();lcnt.textContent=(i+1)+' / '+imgs.length;laduj(i);},{passive:true});
+      lb.querySelector('.lb-p').addEventListener('click',function(){lgo(li()-1);});
+      lb.querySelector('.lb-n').addEventListener('click',function(){lgo(li()+1);});
+      lb.querySelector('.lb-x').addEventListener('click',zamk);
+      document.addEventListener('keydown',function(e){if(lb.hidden)return;if(e.key==='Escape')zamk();if(e.key==='ArrowRight')lgo(li()+1);if(e.key==='ArrowLeft')lgo(li()-1);});
+      lb.lgo=lgo;
+    }
+    var powrot=null;
+    function otworz(i){if(!lb)zbuduj();powrot=document.activeElement;lb.hidden=false;document.body.style.overflow='hidden';[].forEach.call(ltr.children,function(s){s.classList.remove('zoom');});lb.lgo(i);lcnt.textContent=(i+1)+' / '+imgs.length;lb.querySelector('.lb-x').focus();}
+    function zamk(){lb.hidden=true;document.body.style.overflow='';if(powrot)powrot.focus();}
+    var dtr=duza.querySelector('.car-tr'), ruch=false, px=0;
+    dtr.addEventListener('pointerdown',function(e){px=e.clientX;ruch=false;});
+    dtr.addEventListener('pointerup',function(e){ruch=Math.abs(e.clientX-px)>6;});
+    imgs.forEach(function(im,i){im.addEventListener('click',function(){if(!ruch)otworz(i);});});
+    var zb=duza.querySelector('.car-zoom'); if(zb)zb.addEventListener('click',function(){otworz(Math.round(dtr.scrollLeft/Math.max(1,dtr.clientWidth)));});
   }
 
   /* formularze pokazowe */
