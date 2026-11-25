@@ -389,7 +389,7 @@ a.chip[aria-current="page"]{background:var(--ink);border-color:var(--ink);color:
 .car-zoom{position:absolute;left:10px;bottom:10px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;background:rgba(30,31,34,.72);color:#fff;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer}
 .car-zoom svg{width:14px;height:14px}
 .car-duza .car-sl img{cursor:zoom-in}
-.lb{position:fixed;inset:0;z-index:90;background:rgba(14,15,17,.96);display:flex;flex-direction:column}
+.lb{position:fixed;inset:0;z-index:90;background:#0e0f11;display:flex;flex-direction:column}
 .lb[hidden]{display:none}
 .lb-tr{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
 .lb-tr::-webkit-scrollbar{display:none}
